@@ -1,0 +1,155 @@
+import random
+import itertools
+from numpy import array
+
+class World:
+    # default step time in seconds
+    DEFAULT_STEP_TIME = 1
+
+    def __init__(self, width, height):
+        # initialize the map, which is an array of cells.
+        self.map = array(tuple(tuple(cell(world=self,coordinates=(x,y)) for x in range(width)) for y in range(height)))
+
+
+        # to keep track of all the creatures
+        self.creatures = {}
+
+    def iterate(self):
+        # randomly iterate through the board, without changing the order
+        coords = [(x, y) for x in range(self.width) for y in range(self.height)]
+        random.shuffle(coords)
+        for i, j in coords:
+            cell = map[i][j]
+            cell.take_turn()
+
+    # interactively add a creature
+    def add_creature(self):
+        pass
+
+    def is_valid_cell(self,coordinates):
+        for c in coordinates:
+            for d in self.map.shape:
+                if c>d:
+                    return False
+        return True
+
+    def dim(self):
+        return len(self.map.shape)
+
+    def get_cell(self,coordinates):
+        if self.is_valid_cell(coordinates):
+           return self.map[coordinates]
+        else:
+            return None
+
+class cell:
+    def __init__(self,world,coordinates):
+        self.contents = None
+        self.coordinates = coordinates
+
+        # in case we need to pass messages to the world
+        self.world = world
+
+    def take_turn(self):
+        if self.contents:
+            self.contents.act()
+
+    def get_contents(self):
+        return self.contents
+
+    def set_contents(self,content):
+        self.contents = content
+
+class creature:
+    """
+    Base class for creatures in the world.  Needs to be able to act, move, and look around.
+    """
+    NAME = 'Creature'
+
+    def __init__(self,cell):
+        self.cell = cell
+
+    def act(self):
+        # default action is none.
+        pass
+
+    def _get_coordinates(self, offset):
+        return [sum(x) for x in zip(self.cell.coordinates, offset)]
+
+    def get_cell_contents(self,offset):
+        to_check = self._get_coordinates(offset)
+        new_cell = self.cell.world.get_cell(to_check)
+        if new_cell is not None:
+            return cell.get_contents()
+        else:
+            return None
+
+    def is_empty_cell(self,offset):
+        """
+        If the cell exsists and is empty, return true.  False otherwise
+        """
+        cell = self.cell.world.get_cell(self._get_coordinates(offset))
+        return bool(cell and cell.get_contents() is None)
+
+    def move(self, offset):
+        """
+        Move this creature via the offset provided.
+        We assume the creature has already checked that its a valid & empty cell
+        If it is not, nothing happens.
+        :param offset:
+        :return:
+        """
+        loc = self._get_coordinates(offset)
+        if self.is_empty_cell(loc):
+            old_cell = self.cell
+            new_cell = self.cell.world.get_cell(loc)
+            self.cell = new_cell
+            old_cell.contents = None
+        else
+            raise Exception("{} at {} tried to move to non-empty cell {}".format(self.__str__(),self.cell.coordinates,loc))
+
+    def get_empty_cell(self,r=1):
+        start = self.cell.coordinates
+
+        # construct the list of offsets
+        ra = list(range(-r,r+1))
+        ra.remove(0)
+        dim = self.cell.world.dim()
+        offsets= list(itertools.product(ra,repeat=dim))
+
+        # visit the offsets in random order
+        random.shuffle(offsets)
+        for offset in offsets:
+            coordinates = self._get_coordinates(offset)
+            if self.is_empty_cell(coordinates):
+                return self.cell.world.get_cell(coordinates)
+
+        # if no cell is found return none
+        return None
+
+    def __str__(self):
+        return '{}:  {}'.format(self.NAME,self.cell.coordinates)
+
+class basic_plant(creature):
+    MAX_ENERGY = 100
+    ACCUMULATION = 20
+    REPRODUCTION_COST = 60
+    NAME = "Basic Plant"
+
+    def __init__(self,cell):
+        super(self,creature).init(self,cell)
+        self.energy = max(2*self.ACCUMULATION,self.MAX_ENERGY)
+
+    def reproduce(self):
+        pass
+
+    def find_empty_square(self):
+        pass
+
+    def act(self):
+        # accumulate energy
+        self.energy = max(self.energy+self.ACCUMULATION,self.MAX_ENERGY)
+
+
+
+
